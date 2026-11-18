@@ -1,0 +1,149 @@
+LAPORAN UTS PEMROGRAMAN WEB
+Ngawiflix: Sistem Pemesanan Tiket Bioskop dengan Denah Kursi Interaktif
+
+
+ISI
+1. Ringkasan
+2. Cara kerja
+3. Kebutuhan dan tools
+4. Hasil aplikasi
+
+
+1. RINGKASAN
+
+Ngawiflix adalah aplikasi web untuk memesan tiket bioskop. Pengguna memilih film, jadwal, lalu kursi langsung di denah. Setelah isi data diri dan bayar (simulasi), pengguna mendapat tiket yang bisa dicetak. Admin bisa menambah film dan jadwal.
+
+Aplikasi dibuat dengan HTML, CSS, dan JavaScript murni. Tidak memakai framework, library, atau template. Tidak ada server. Semua data disimpan di browser.
+
+
+2. CARA KERJA
+
+2.1 File utama
+- index.html : kerangka halaman. Semua halaman (view) ada di sini, tapi hanya satu yang tampil.
+- style.css  : tampilan. Warna dan jarak diatur lewat variabel di :root. Ada dua tema: gelap (hitam dan pink) dan terang (putih dan pink).
+- data.js    : data awal: film, studio, jadwal, dan harga.
+- script.js  : logika. Membaca data, membuat tampilan, menangani klik dan form, dan menyimpan data.
+
+2.2 Pindah halaman
+Setiap halaman adalah <section class="view">. Halaman yang tampil diatur lewat atribut hidden. Pindah halaman memakai hash di URL: #films, #showtimes, #seats, #checkout, #ticket, #history, #admin. Jadi tombol Back dan Forward browser tetap jalan.
+
+Setiap kali hash berubah, fungsi showView() menampilkan halaman yang dituju, menandai menu aktif, memindahkan fokus ke judul halaman, lalu menggambar ulang isinya. Ada pengaman: membuka #seats tanpa jadwal terpilih akan dialihkan ke #films.
+
+2.3 Cara kerja DOM
+DOM adalah representasi halaman di memori browser. JavaScript mengubah DOM, dan browser langsung menampilkan perubahannya. Yang dipakai:
+- querySelector dan querySelectorAll untuk mencari elemen.
+- createElement dan fungsi el() untuk membuat kartu film, slot jadwal, kursi, baris tabel, dan notifikasi.
+- replaceChildren untuk mengganti isi halaman dengan hasil terbaru, jadi setiap render mulai dari kondisi bersih.
+- Event delegation: listener dipasang di induknya, lalu event.target.closest() mencari tombol yang diklik. Denah kursi cukup punya satu listener untuk semua kursi.
+- dataset dan setAttribute untuk id kursi, aria-label, aria-pressed, aria-disabled, dan aria-invalid.
+- classList.toggle untuk status kursi (is-selected, is-sold, is-broken).
+- Teks dari pengguna dimasukkan lewat textContent, bukan innerHTML. Jadi isian seperti <script> tidak dijalankan.
+- Konfirmasi memakai elemen <dialog> dengan showModal(), menggantikan alert() dan confirm().
+
+2.4 Penyimpanan data (localStorage)
+Data disimpan di localStorage, yaitu penyimpanan browser yang tetap ada setelah reload. Isinya teks JSON, dibuat dengan JSON.stringify() dan dibaca dengan JSON.parse().
+
+Kunci yang dipakai:
+- cinema.v1.films: film tambahan dari admin.
+- cinema.v1.showtimes: jadwal tambahan dari admin.
+- cinema.v1.bookings: semua booking, aktif atau dibatalkan.
+- cinema.v1.deleted: id film dan jadwal yang dihapus. Perlu karena data awal dari data.js tidak bisa diubah langsung.
+- cinema.v1.seed: penanda bahwa data demo sudah dimuat.
+- cinema.v1.theme: pilihan tema gelap atau terang.
+
+Satu booking berisi: id, code, showtimeId, seats, categories, total, paymentMethod, customer (name, phone, email), status (active atau cancelled), dan createdAt.
+
+Semua akses localStorage dibungkus try/catch. Jika penyimpanan penuh atau diblokir, aplikasi tetap jalan dan menampilkan pesan error.
+
+Aturan yang dijaga kode:
+- Film atau jadwal yang punya booking aktif tidak bisa dihapus.
+- Menghapus film juga menghapus jadwalnya.
+- Jadwal di studio yang sama harus berjarak minimal 150 menit.
+- Kode tiket (format TIX-XXXXXX) dibuat acak dan dicek agar tidak kembar.
+
+2.5 Denah kursi
+Denah dibuat dari data studio: jumlah baris dan kolom, letak gang (aisleAfter), baris VIP, baris Couple, dan kursi rusak.
+- Studio 1: 8 baris (A-H) x 12 kolom. Baris E-G VIP, baris H Couple, kursi D5 rusak.
+- Studio 2 (Premium): 6 baris x 10 kolom. Baris C-F VIP, baris F Couple.
+
+Status kursi dihitung ulang tiap kali denah berubah, dengan urutan: rusak, terjual, dipilih, lalu tersedia. Kursi Couple selalu dipilih dan dibatalkan berpasangan (kolom 1-2, 3-4, dan seterusnya). Maksimal 6 kursi per transaksi.
+
+Keyboard: hanya satu kursi bisa difokus dengan Tab. Tombol panah memindahkan fokus, Enter atau Spasi memilih kursi.
+
+2.6 Alur pesan tiket
+1. Pilih film, lalu jadwal. Jadwal yang sudah lewat tidak bisa dipilih.
+2. Pilih kursi. Ringkasan dan total langsung berubah.
+3. Isi nama, nomor HP, email, dan metode bayar.
+4. Tekan Bayar. Aplikasi menunggu 1 detik sebagai simulasi.
+5. Aplikasi mengecek ulang jadwal dan kursi. Kalau kursi sudah terjual, pengguna diminta memilih ulang.
+6. Booking disimpan dengan status active, lalu pengguna dibawa ke halaman tiket.
+
+Di riwayat, booking aktif bisa dibatalkan (dengan konfirmasi). Booking yang sudah dibatalkan bisa dihapus dari riwayat.
+
+
+3. KEBUTUHAN DAN TOOLS
+
+3.1 Kebutuhan fungsional
+- F1 Film: kartu film, cari judul, filter genre (chip dan dropdown), urutkan judul atau durasi.
+- F2 Jadwal: pilih tanggal, jadwal per studio, sisa kursi, jadwal lewat tidak bisa dipilih. Sinopsis film tampil di halaman ini.
+- F3 Denah kursi: pilih dan batal pilih, Couple berpasangan, maksimal 6 kursi, legenda, navigasi keyboard.
+- F4 Checkout: validasi form, pilihan metode bayar, simulasi bayar.
+- F5 Tiket: kode unik, detail pesanan, bisa dicetak.
+- F6 Riwayat: cari, filter status, batalkan dan hapus tiket.
+- F7 Admin: tambah film dan jadwal, cek bentrok, hapus film atau jadwal, statistik per film, reset data demo.
+- F8 Pendukung: notifikasi, tampilan responsif, aksesibilitas dasar, dan tema gelap atau terang.
+
+3.2 Kebutuhan non-fungsional
+- Hanya HTML, CSS, dan JavaScript murni. Tanpa framework, library UI, atau template.
+- Tidak perlu instalasi, build, atau server.
+- Data tetap ada setelah halaman dimuat ulang.
+
+3.3 Tools
+- Browser untuk pengembangan dan tes: Microsoft Edge (Chromium).
+- Browser yang didukung: Chrome, Edge, atau Firefox versi terbaru.
+- Editor: Visual Studio Code, dengan Live Server untuk menjalankan halaman.
+- Font: Montserrat dari Google Fonts. Kalau offline, tampilan kembali ke font sistem.
+- Sistem operasi: Windows 11 Pro.
+- Tes otomatis: skrip Node.js yang mengendalikan Edge headless lewat Chrome DevTools Protocol.
+
+Cara menjalankan: buka folder proyek di VS Code, klik kanan index.html, pilih "Open with Live Server". Atau buka index.html langsung di browser.
+
+
+4. HASIL APLIKASI
+
+4.1 Fitur yang sudah jalan
+- Film: 6 film demo dengan poster, sinopsis, genre, durasi, dan rating. Semua judul dan sinopsis fiktif.
+- Jadwal: tanggal dan jam per studio, lengkap dengan sisa kursi. Sinopsis dan latar poster film tampil di atas.
+- Denah: gang, kursi rusak, zona VIP dan Couple, ringkasan dengan total harga.
+- Checkout: validasi form, metode bayar, simulasi bayar.
+- Tiket: kode TIX-XXXXXX, bisa dicetak.
+- Riwayat: booking aktif bisa dibatalkan dan kursinya kembali tersedia. Booking batal bisa dihapus.
+- Admin: tambah film dan jadwal, daftar jadwal, statistik, dan reset data demo.
+- Tampilan: gaya daftar film bioskop, tema gelap (hitam dan pink) dan terang (putih dan pink).
+
+4.2 Alur pemakaian
+Film -> Jadwal -> Kursi -> Data pemesan -> Bayar (simulasi) -> Tiket
+                                                                |
+                                                  Riwayat (lihat, batalkan, hapus)
+
+4.3 Pengujian
+Tes otomatis di Edge headless: 25 dari 25 lulus. Yang diuji:
+- 6 film tampil. Denah berisi 96 kursi, kursi rusak tidak bisa dipilih.
+- Harga Couple benar. Contoh: satu kursi Reguler dan satu pasang Couple totalnya Rp 135.000.
+- Batas 6 kursi.
+- Validasi checkout, pembuatan booking, dan kursi jadi terjual setelah bayar.
+- Pembatalan dengan konfirmasi Tidak dan Ya.
+- Validasi form admin, cek jadwal bentrok, dan reset data demo.
+- Tidak ada scroll horizontal di lebar 360 px pada halaman denah, tiket, riwayat, film, dan admin.
+- Tidak ada error di konsol.
+
+Belum dilakukan: Lighthouse (aksesibilitas, best practices, SEO, performa). Skornya perlu diambil manual lewat tab Lighthouse di Chrome DevTools.
+
+Belum ada tes otomatis untuk hapus tiket dan tombol tema. Dua fitur ini perlu dicek manual.
+
+4.4 Keterbatasan
+- Pembayaran hanya simulasi. Tidak terhubung ke payment gateway.
+- Data hanya ada di satu browser. Double booking antar perangkat tidak bisa dicegah tanpa backend dan database bersama.
+- Admin tidak punya login. Siapa pun yang membuka aplikasi bisa masuk ke admin.
+- Booking batal bisa menampilkan "Film tidak ditemukan" kalau film atau jadwalnya sudah dihapus admin.
+- Tanggal demo dihitung dari hari ini saat halaman dibuka, jadi jadwal demo selalu di masa depan.
